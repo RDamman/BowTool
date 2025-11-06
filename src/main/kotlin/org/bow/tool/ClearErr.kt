@@ -1,4 +1,4 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import com.fazecast.jSerialComm.SerialPort
 
@@ -28,13 +28,13 @@ class ClearErr(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort, baud
     }
 
     override fun handleResponse(message: Message): Result {
-        if (message.tgt() != pcId || !message.isRsp()) {
+        if (message.tgt() != BOWDEVICE.PC.id || !message.isRsp()) {
             return Result.CONTINUE
         }
 
         when (state) {
             State.SHOW_ERR -> {
-                if (message.src() == batId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.BATTERY.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     log("Error state stored in bat: ${hex(message.data().drop(3))}")
                     state = State.CLEAR_ERR
                     return Result.SEND_COMMAND
@@ -43,7 +43,7 @@ class ClearErr(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort, baud
 
 
             State.CLEAR_ERR -> {
-                if (message.src() == batId && message.isCmd(0x09)) {
+                if (message.src() == BOWDEVICE.BATTERY.id && message.isCmd(BOWCOMMAND.PUT_DATA.id)) {
                     log("Error state set to '0'!")
                     state = State.CHECK_ERR
                     return Result.SEND_COMMAND
@@ -51,7 +51,7 @@ class ClearErr(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort, baud
             }
 
             State.CHECK_ERR -> {
-                if (message.src() == batId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.BATTERY.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     log("Error state stored in bat: ${hex(message.data().drop(3))}")
                     return Result.DONE
                 }

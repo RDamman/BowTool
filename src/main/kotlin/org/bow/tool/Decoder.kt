@@ -1,33 +1,33 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class Decoder(private val commandsByInt: Map<UByte, String>, private val dataIdsByInt: Map<UByte, String>) {
+class Decoder(private val config: Config) {
 
-    private val getDataDecoder = GetDataDecoder(dataIdsByInt)
+    private val getDataDecoder = GetDataDecoder(config.dataIds)
 
     fun check(message: Message) = buildString {
         if (message.message.size != message.size!!.toInt()) {
             append(" SIZE MISMATCH")
         }
 
-        if (CRC8().crc8Bow(message.message.dropLast(1)) != message.message.last()) {
+        if (CRC8.crc8Bow(message.message.dropLast(1)) != message.message.last()) {
             append(" CRC MISMATCH")
         }
     }
 
     fun decode(message: Message): String {
-        return when (message.type.toInt()) {
-            0x04 -> "PING!"
-            0x03 -> "PONG!"
-            0x00 -> "HANDOFF"
-            0x01, 0x02 -> decodeRequestOrResponse(message)
+        return when (message.type) {
+            BOWTYPE.PING.id -> "${BOWTYPE.PING.Name} ${config.devices.findById(message.src()?.toInt()!!)!!.Name}=>${config.devices.findById(message.tgt()?.toInt()!!)!!.Name}"
+            BOWTYPE.PONG.id -> "${BOWTYPE.PONG.Name} ${config.devices.findById(message.src()?.toInt()!!)!!.Name}=>${config.devices.findById(message.tgt()?.toInt()!!)!!.Name}"
+            BOWTYPE.HANDOFF.id -> "${BOWTYPE.HANDOFF.Name} ${config.devices.findById(message.tgt()?.toInt()!!)!!.Name}"
+            BOWTYPE.REQUEST.id, BOWTYPE.RESPONSE.id, BOWTYPE.UNKNOWN.id -> decodeRequestOrResponse(message)
             else -> ""
         }
     }
 
     private fun decodeRequestOrResponse(message: Message): String {
         var decoded = ""
-        val cmdName = withName(message.message[3], commandsByInt)
+        val cmdName = withName2(message.message[3], config.commands)
         val data = message.data()
 
         // Defaults
@@ -38,16 +38,16 @@ class Decoder(private val commandsByInt: Map<UByte, String>, private val dataIds
         }
 
         when (message.cmd()) {
-            0x08 -> if (message.isReqOrRsp()) decoded = "$cmdName ${if (message.isRsp()) " - OK" else ""} ${getDataDecoder.createGetDataString(message)}"
-            0x09 -> if (message.isReqOrRsp()) decoded = "$cmdName ${if (message.isRsp()) " - OK" else ""} ${createPutDataString(message)}"
-            0x17 -> if (message.isReq()) decoded = "$cmdName: E-00${hex(data.slice(0 until 1))}"
-            0x20 -> if (message.isRsp()) decoded = "$cmdName - OK ${hex(data.slice(0 until 2))} ${hex(data.slice(6 until 8))} (${hex(data)})"
-
-            0x26, 0x27 -> if (message.isReq()) {
+            BOWCOMMAND.GET_DATA.id -> if (message.isReqOrRsp()) decoded = "$cmdName ${if (message.isRsp()) " - OK" else ""} ${getDataDecoder.createGetDataString(message)}"
+            BOWCOMMAND.PUT_DATA.id -> if (message.isReqOrRsp()) decoded = "$cmdName ${if (message.isRsp()) " - OK" else ""} ${createPutDataString(message)}"
+            BOWCOMMAND.SHOW_ERROR.id -> if (message.isReq()) decoded = "$cmdName: E-00${hex(data.slice(0 until 1))}"
+            BOWCOMMAND.GET_DISPLAY_SERIAL.id -> if (message.isRsp()) decoded = "$cmdName - OK ${hex(data.slice(0 until 2))} ${hex(data.slice(6 until 8))} (${hex(data)})"
+            // CU2 Display update
+            BOWCOMMAND.CU2_UPDATE_DISPLAY.id, BOWCOMMAND.CU2_UPDATE_DISPLAY_2.id -> if (message.isReq()) {
                 decoded += createCu2UpdateDisplayString(message)
             }
-
-            0x28 -> if (message.isReq()) {
+            // CU3 Display update
+            BOWCOMMAND.CU3_UPDATE_DISPLAY.id -> if (message.isReq()) {
                 decoded += ": "
                 decoded += when (data[0].toInt()) {
                     0x00 -> "SCR:MAIN"
@@ -88,7 +88,7 @@ class Decoder(private val commandsByInt: Map<UByte, String>, private val dataIds
                 decoded += "trip2:${data[9].toInt().shl(24) + data[10].toInt().shl(16) + data[11].toInt().shl(8) + data[12].toInt()} "
             }
 
-            0x34 -> if (message.isReq()) {
+            BOWCOMMAND.SET_ASSIST_LEVEL.id -> if (message.isReq()) {
                 decoded += when (val value = data[0].toInt()) {
                     0x00 -> ""
                     0x01 -> " > ECO"
@@ -175,7 +175,7 @@ class Decoder(private val commandsByInt: Map<UByte, String>, private val dataIds
     inner class PutDataPart(val type: TypeFlags, val id: UByte, val offset: Int?, val elements: List<List<UByte>>) {
         override fun toString() = buildString {
             append(" ${hex(type.typeValue)}:${hex(id)}")
-            append("(${dataIdsByInt[id] ?: "Unknown"})")
+            append("(${config.dataIds.findNameById(id.toInt()) ?: "Unknown"})")
             if (type.array) append("[${offset}]")
             append(dataToString())
         }

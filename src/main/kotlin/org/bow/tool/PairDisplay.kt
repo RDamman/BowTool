@@ -1,4 +1,4 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import com.fazecast.jSerialComm.SerialPort
 
@@ -39,13 +39,13 @@ class DisplayPairer(serialPort: SerialPort, baudRate: Int, private var index: In
     }
 
     override fun handleResponse(message: Message): Result {
-        if (message.tgt() != pcId || !message.isRsp()) {
+        if (message.tgt() != BOWDEVICE.PC.id || !message.isRsp()) {
             return Result.CONTINUE
         }
 
         when (state) {
             State.GET_DISPLAY_SERIAL -> {
-                if (message.src() == displayId && message.isCmd(0x20)) {
+                if (message.src() == BOWDEVICE.DISPLAY.id && message.isCmd(BOWCOMMAND.GET_DISPLAY_SERIAL.id)) {
                     displaySerial = message.data()
                     log("Display serial: ${hex(displaySerial)}")
                     state = State.GET_STORED_SERIAL
@@ -54,7 +54,7 @@ class DisplayPairer(serialPort: SerialPort, baudRate: Int, private var index: In
             }
 
             State.GET_STORED_SERIAL -> {
-                if (message.src() == motorId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.MOTOR.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     val motorDisplaySerial = message.data().drop(4)
                     log("Display serial stored in motor slot ${index + 1}: ${hex(motorDisplaySerial)}")
                     if (displaySerial.equals(motorDisplaySerial)) {
@@ -67,7 +67,7 @@ class DisplayPairer(serialPort: SerialPort, baudRate: Int, private var index: In
             }
 
             State.PUT_SERIAL -> {
-                if (message.src() == motorId && message.isCmd(0x09)) {
+                if (message.src() == BOWDEVICE.MOTOR.id && message.isCmd(BOWCOMMAND.PUT_DATA.id)) {
                     log("New display serial stored in motor!")
                     state = State.CHECK_STORED_SERIAL
                     return Result.SEND_COMMAND
@@ -75,7 +75,7 @@ class DisplayPairer(serialPort: SerialPort, baudRate: Int, private var index: In
             }
 
             State.CHECK_STORED_SERIAL -> {
-                if (message.src() == motorId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.MOTOR.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     log("Display serial stored in motor slot ${index + 1}: ${hex(message.data().drop(4))}")
                     return Result.DONE
                 }

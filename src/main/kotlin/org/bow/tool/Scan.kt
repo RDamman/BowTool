@@ -1,18 +1,17 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import com.fazecast.jSerialComm.SerialPort
 
 object Scan {
     @JvmStatic
     fun main(args: Array<String>) {
-        val config = loadConfig()
         val comPort = SerialPort.getCommPorts()[0]
-        Scanner(comPort, 19200, 0x0cu, byInt(config.dataIds)).exec()
+        Scanner(comPort, 19200, BOWDEVICE.DISPLAY.id, Config.getInstance()).exec()
     }
 }
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class Scanner(serialPort: SerialPort, baudRate: Int, private val target: UByte, dataIdsByInt: Map<UByte, String>) : StdLoop(serialPort, baudRate) {
+class Scanner(serialPort: SerialPort, baudRate: Int, private val target: UByte, private val config: Config) : StdLoop(serialPort, baudRate) {
 
     private val toScan = List(256) { it.toUByte() }.toMutableList()
     private val allTypes = (0x00u..0xffu).map { it.toUByte() }
@@ -23,13 +22,13 @@ class Scanner(serialPort: SerialPort, baudRate: Int, private val target: UByte, 
     private var typePos = 0
     private var request: Message? = null
     private val results = ArrayList<Pair<Message, Message>>()
-    private val decoder = GetDataDecoder(dataIdsByInt)
+    private val decoder = GetDataDecoder(config.dataIds)
     private var arrOffset = 0u
 
     fun exec(): List<Message>  {
         if (!open()) return emptyList()
 
-        loop(if (target.toUInt() == 0x02u) Mode.WAKEUP_BAT else Mode.CHECK_BAT)
+        loop(if (target == BOWDEVICE.BATTERY.id) Mode.WAKEUP_BAT else Mode.CHECK_BAT)
         return getMessageLog()
     }
 
@@ -50,10 +49,10 @@ class Scanner(serialPort: SerialPort, baudRate: Int, private val target: UByte, 
     }
 
     override fun handleResponse(message: Message): Result {
-        if (message.tgt() == target.toInt() && message.isReq() && message.src() == pcId && message.isCmd(0x08)) {
+        if (message.tgt() == target && message.isReq() && message.src() == BOWDEVICE.PC.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
             // Keep a copy of the parsed request we sent.
             request = message
-        } else if (message.tgt() == pcId && message.isRsp() && message.src() == target.toInt() && message.isCmd(0x08)) {
+        } else if (message.tgt() == BOWDEVICE.PC.id && message.isRsp() && message.src() == target && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
             val response = message.data()[0]
             if (response.toUInt() == 0x01u) {
                 // No value, or invalid type requested

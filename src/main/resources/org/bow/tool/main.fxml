@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2015, 2019, Gluon and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.input.KeyCodeCombination?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefHeight="746.0" prefWidth="938.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.bow.tool.MainController">
+  <children>
+    <MenuBar prefWidth="640.0" VBox.vgrow="NEVER">
+      <menus>
+        <Menu mnemonicParsing="false" text="File">
+          <items>
+            <MenuItem fx:id="menuItemFileClear" mnemonicParsing="false" onAction="#menuItemFileClearAction" text="New / Clear" />
+                  <MenuItem fx:id="menuItemFileOpen" mnemonicParsing="false" text="Open">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="O" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
+                  <MenuItem fx:id="menuItemFileOpenBin" mnemonicParsing="false" text="Open Bin" />
+            <MenuItem fx:id="menuItemFileOpenHex" mnemonicParsing="false" text="Open Hex" />
+                  <MenuItem fx:id="menuItemFileAdd" mnemonicParsing="false" text="Add" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="menuItemSave" mnemonicParsing="false" onAction="#menuItemFileSaveAction" text="Save" />
+            <MenuItem fx:id="menuItemSaveAs" mnemonicParsing="false" onAction="#menuItemFileSaveAsAction" text="Save As…" />
+                  <MenuItem fx:id="menuItemSaveSelection" mnemonicParsing="false" onAction="#menuItemFileSaveSelectionAction" text="Save Selection" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="menuItemPreferences" mnemonicParsing="false" onAction="#menuItemPreferencesAction" text="Preferences…" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="menuItemExit" mnemonicParsing="false" onAction="#menuItemExitAction" text="Quit" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Message">
+          <items>
+            <MenuItem fx:id="menuItemNew" mnemonicParsing="false" onAction="#menuItemNewAction" text="New" />
+            <MenuItem fx:id="menuItemEdit" mnemonicParsing="false" onAction="#menuItemEditAction" text="Edit" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="menuItemCut" mnemonicParsing="false" onAction="#menuItemCutAction" text="Cut">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="X" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator></MenuItem>
+            <MenuItem fx:id="menuItemCopy" mnemonicParsing="false" onAction="#menuItemCopyAction" text="Copy">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="C" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator></MenuItem>
+            <MenuItem fx:id="menuItemPaste" mnemonicParsing="false" onAction="#menuItemPasteAction" text="Paste">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="V" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator></MenuItem>
+            <MenuItem fx:id="menuItemDelete" mnemonicParsing="false" onAction="#menuItemDeleteAction" text="Delete">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="DELETE" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator></MenuItem>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="menuItemSelectAll" mnemonicParsing="false" onAction="#menuItemSelectAllAction" text="Select All">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="A" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator></MenuItem>
+          </items>
+        </Menu>
+            <Menu mnemonicParsing="false" text="Execute">
+              <items>
+                  <Menu mnemonicParsing="false" text="Pair">
+                    <items>
+                      <MenuItem fx:id="menuItemPairBattery" mnemonicParsing="false" text="Battery" />
+                        <MenuItem fx:id="menuItemPairDisplay" mnemonicParsing="false" text="Display" />
+                    </items>
+                  </Menu>
+                  <Menu mnemonicParsing="false" text="Scan">
+                    <items>
+                      <MenuItem fx:id="menuItemScanBattery" mnemonicParsing="false" text="Scan Battery" />
+                        <MenuItem fx:id="menuItemScanDisplay" mnemonicParsing="false" text="Scan Display (CU3)" />
+                        <MenuItem fx:id="menuItemScanMotor" mnemonicParsing="false" text="Scan Motor" />
+                    </items>
+                  </Menu>
+                  <Menu mnemonicParsing="false" text="Command">
+                    <items>
+                      <MenuItem fx:id="menuItemClearError0003" mnemonicParsing="false" text="Clear Error 0003" />
+                    </items>
+                  </Menu>
+                  <MenuItem mnemonicParsing="false" text="Inspect" />
+              </items>
+            </Menu>
+        <Menu mnemonicParsing="false" text="Help">
+          <items>
+            <MenuItem mnemonicParsing="false" text="About MyHelloApp" />
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
+    <AnchorPane fx:id="anchorPaneMain" maxHeight="-1.0" maxWidth="-1.0" prefHeight="705.0" prefWidth="1013.0" VBox.vgrow="ALWAYS">
+      <children>
+            <AnchorPane fx:id="anchorPaneMessages" layoutX="6.0" layoutY="156.0" prefHeight="545.0" prefWidth="920.0" style="-fx-border-color: gray;">
+               <children>
+                  <AnchorPane fx:id="anchorPaneMessageFilter" layoutX="7.0" layoutY="15.0" prefHeight="142.0" prefWidth="907.0" style="-fx-border-color: gray;">
+                     <children>
+                        <Label layoutX="9.0" layoutY="-8.0" style="-fx-background-color: White;" text="Filter / Visible">
+                           <padding>
+                              <Insets left="5.0" right="5.0" />
+                           </padding>
+                        </Label>
+                        <AnchorPane layoutX="9.0" layoutY="14.0" prefHeight="120.0" prefWidth="205.0" style="-fx-border-color: gray;">
+                           <children>
+                              <Button fx:id="buttonSrcClear" layoutX="133.0" layoutY="88.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="64.0" text="Clear" />
+                              <Label layoutX="10.0" layoutY="-8.0" style="-fx-background-color: White;" text="Source">
+                                 <padding>
+                                    <Insets left="5.0" right="5.0" />
+                                 </padding>
+                              </Label>
+                              <CheckBox fx:id="checkBoxSrcMotor" layoutX="15.0" layoutY="52.0" mnemonicParsing="false" text="Motor" />
+                              <CheckBox fx:id="checkBoxSrcDisplay" layoutX="15.0" layoutY="33.0" mnemonicParsing="false" text="Display" />
+                              <CheckBox fx:id="checkBoxSrcControlPad" layoutX="95.0" layoutY="15.0" mnemonicParsing="false" text="Control Pad" />
+                              <CheckBox fx:id="checkBoxSrcBattery" layoutX="15.0" layoutY="14.0" mnemonicParsing="false" text="Battery" />
+                              <CheckBox fx:id="checkBoxSrcTorqueSensor" layoutX="15.0" layoutY="92.0" mnemonicParsing="false" text="Torque Sensor" />
+                              <CheckBox fx:id="checkBoxSrcOther" layoutX="95.0" layoutY="53.0" mnemonicParsing="false" text="Other" />
+                              <CheckBox fx:id="checkBoxSrcPC" layoutX="15.0" layoutY="72.0" mnemonicParsing="false" text="PC" />
+                              <CheckBox fx:id="checkBoxSrcCharger" layoutX="95.0" layoutY="34.0" mnemonicParsing="false" text="Charger" />
+                           </children>
+                        </AnchorPane>
+                        <AnchorPane layoutX="227.0" layoutY="14.0" prefHeight="120.0" prefWidth="205.0" style="-fx-border-color: gray;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+                           <children>
+                              <Button fx:id="buttonTgtClear" layoutX="133.0" layoutY="88.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="64.0" text="Clear" />
+                              <Label layoutX="10.0" layoutY="-8.0" style="-fx-background-color: White;" text="Target">
+                                 <padding>
+                                    <Insets left="5.0" right="5.0" />
+                                 </padding>
+                              </Label>
+                              <CheckBox fx:id="checkBoxTgtMotor" layoutX="15.0" layoutY="52.0" mnemonicParsing="false" text="Motor" />
+                              <CheckBox fx:id="checkBoxTgtDisplay" layoutX="15.0" layoutY="33.0" mnemonicParsing="false" text="Display" />
+                              <CheckBox fx:id="checkBoxTgtControlPad" layoutX="95.0" layoutY="15.0" mnemonicParsing="false" text="Control Pad" />
+                              <CheckBox fx:id="checkBoxTgtBattery" layoutX="15.0" layoutY="14.0" mnemonicParsing="false" text="Battery" />
+                              <CheckBox fx:id="checkBoxTgtTorqueSensor" layoutX="15.0" layoutY="92.0" mnemonicParsing="false" text="Torque Sensor" />
+                              <CheckBox fx:id="checkBoxTgtOther" layoutX="95.0" layoutY="53.0" mnemonicParsing="false" text="Other" />
+                              <CheckBox fx:id="checkBoxTgtPC" layoutX="15.0" layoutY="72.0" mnemonicParsing="false" text="PC" />
+                              <CheckBox fx:id="checkBoxTgtCharger" layoutX="95.0" layoutY="34.0" mnemonicParsing="false" text="Charger" />
+                           </children>
+                        </AnchorPane>
+                        <AnchorPane layoutX="444.0" layoutY="14.0" prefHeight="120.0" prefWidth="205.0" style="-fx-border-color: gray;">
+                           <children>
+                              <Button fx:id="buttonMsgClear" layoutX="132.0" layoutY="88.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="64.0" text="Clear" />
+                              <Label layoutX="10.0" layoutY="-8.0" style="-fx-background-color: White;" text="Message Type">
+                                 <padding>
+                                    <Insets left="5.0" right="5.0" />
+                                 </padding>
+                              </Label>
+                              <CheckBox fx:id="checkBoxRequest" layoutX="15.0" layoutY="16.0" mnemonicParsing="false" text="Request" />
+                              <CheckBox fx:id="checkBoxResponse" layoutX="15.0" layoutY="35.0" mnemonicParsing="false" text="Response" />
+                              <CheckBox fx:id="checkBoxHandOff" layoutX="15.0" layoutY="93.0" mnemonicParsing="false" text="Hand Off" />
+                              <CheckBox fx:id="checkBoxMsgOther" layoutX="132.0" layoutY="16.0" mnemonicParsing="false" text="Other" />
+                              <CheckBox fx:id="checkBoxPong" layoutX="15.0" layoutY="74.0" mnemonicParsing="false" text="Pong" />
+                              <CheckBox fx:id="checkBoxPing" layoutX="15.0" layoutY="55.0" mnemonicParsing="false" text="Ping" />
+                           </children>
+                        </AnchorPane>
+                        <AnchorPane layoutX="661.0" layoutY="14.0" prefHeight="120.0" prefWidth="191.0" style="-fx-border-color: gray;">
+                           <children>
+                              <Button fx:id="buttonQualityClear" layoutX="118.0" layoutY="88.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="64.0" text="Clear" />
+                              <Label layoutX="9.0" layoutY="-8.0" style="-fx-background-color: White;" text="Quality">
+                                 <padding>
+                                    <Insets left="5.0" right="5.0" />
+                                 </padding>
+                              </Label>
+                              <CheckBox fx:id="checkBoxCRCOK" layoutX="15.0" layoutY="16.0" mnemonicParsing="false" text="CRC OK" />
+                              <CheckBox fx:id="checkBoxLengthOK" layoutX="15.0" layoutY="35.0" mnemonicParsing="false" text="Length OK" />
+                              <CheckBox fx:id="checkBoxCRCError" layoutX="15.0" layoutY="54.0" mnemonicParsing="false" text="CRC Error" />
+                              <CheckBox fx:id="checkBoxLengthError" layoutX="15.0" layoutY="74.0" mnemonicParsing="false" text="Length Error" />
+                           </children>
+                        </AnchorPane>
+                     </children>
+                  </AnchorPane>
+                  <TableView fx:id="tableViewMessages" layoutX="6.0" layoutY="164.0" prefHeight="338.0" prefWidth="904.0">
+                    <columns>
+                        <TableColumn fx:id="tableColumnMsgsId" prefWidth="53.0" text="ID" />
+                      <TableColumn fx:id="tableColumnMsgsTime" prefWidth="149.0" text="Time" />
+                      <TableColumn fx:id="tableColumnMsgsRawData" minWidth="9.0" prefWidth="191.0" text="Raw Data" />
+                        <TableColumn fx:id="tableColumnMsgsLengthCrc" minWidth="9.0" text="Length/CRC" />
+                        <TableColumn fx:id="tableColumnMsgsType" minWidth="9.0" prefWidth="111.0" text="Type" />
+                        <TableColumn fx:id="tableColumnMsgsSource" minWidth="9.0" prefWidth="71.0" text="Source" />
+                        <TableColumn fx:id="tableColumnMsgsTarget" minWidth="9.0" prefWidth="83.0" text="Target" />
+                        <TableColumn fx:id="tableColumnMsgsDecoded" minWidth="9.0" prefWidth="225.0" text="Decoded" />
+                        <TableColumn fx:id="tableColumnMsgsComment" minWidth="9.0" prefWidth="253.0" text="Comment" />
+                    </columns>
+                  </TableView>
+                  <Label layoutX="5.0" layoutY="-9.0" style="-fx-background-color: White;" text="Messages">
+                     <padding>
+                        <Insets left="5.0" right="5.0" />
+                     </padding>
+                  </Label>
+               </children>
+            </AnchorPane>
+            <AnchorPane fx:id="anchorPaneCommunication" layoutX="6.0" layoutY="14.0" prefHeight="120.0" prefWidth="920.0" style="-fx-border-color: gray;">
+               <children>
+                  <Label layoutX="9.0" layoutY="-8.0" style="-fx-background-color: White;" text="Communication">
+                     <padding>
+                        <Insets left="5.0" right="5.0" />
+                     </padding>
+                  </Label>
+                  <AnchorPane layoutX="7.0" layoutY="17.0" prefHeight="70.0" prefWidth="405.0" style="-fx-border-color: gray;">
+                     <children>
+                        <Label layoutX="10.0" layoutY="-8.0" style="-fx-background-color: White;" text="Connection">
+                           <padding>
+                              <Insets left="5.0" right="5.0" />
+                           </padding>
+                        </Label>
+                        <ComboBox fx:id="comboBoxBaudrate" layoutX="84.0" layoutY="39.0" prefWidth="150.0" promptText="Baudrate" />
+                        <Label layoutX="15.0" layoutY="43.0" text="Baudrate" />
+                        <ComboBox fx:id="comboBoxComPort" layoutX="84.0" layoutY="15.0" prefWidth="150.0" promptText="Com port" />
+                        <Label layoutX="14.0" layoutY="19.0" text="Com port" />
+                        <Button fx:id="buttonConnect" layoutX="278.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="98.0" text="Connect" />
+                     </children>
+                  </AnchorPane>
+                  <Button fx:id="buttonLogMessages" layoutX="451.0" layoutY="30.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="137.0" text="Log Messages" />
+                  <TextField fx:id="textFieldStatus" layoutX="7.0" layoutY="90.0" prefHeight="27.0" prefWidth="907.0" promptText="Status and last message" style="-fx-background-color: #f0f0f0; -fx-border-color: gray;" />
+               </children>
+            </AnchorPane>
+      </children>
+    </AnchorPane>
+  </children>
+</VBox>

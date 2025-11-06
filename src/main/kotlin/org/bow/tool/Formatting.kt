@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
-package org.bowparser.bowparser
+package org.bow.tool
 
 import java.math.BigInteger
 import java.util.*
@@ -18,3 +18,7 @@ fun asInt(value: List<UByte>) = BigInteger(value.toUByteArray().toByteArray()).t
 fun asFloat32(value: List<UByte>) = Float.fromBits(BigInteger(value.toUByteArray().toByteArray()).toInt()).toString()
 
 fun asString(value: List<UByte>) = "'${String(value.toUByteArray().asByteArray())}'"
+
+fun UByteArray.toHexString(): String { return joinToString(separator = "") { element -> "%02x".format(element.toInt())
+    }
+}

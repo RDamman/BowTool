@@ -1,6 +1,6 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
-class GetDataDecoder(private val dataIdsByInt: Map<UByte, String>) {
+class GetDataDecoder(private val dataIdsByInt: BowItems) {
 
     fun createGetDataString(message: Message) = buildString {
         if (message.isReq()) {
@@ -45,7 +45,7 @@ class GetDataDecoder(private val dataIdsByInt: Map<UByte, String>) {
     inner class ReqPart(val type: TypeFlags, val id: UByte, val offset: Int?) {
         override fun toString() = buildString {
             append(" ${hex(type.typeValue)}:${hex(id)}")
-            append("(${dataIdsByInt[id] ?: "Unknown"})")
+            append("(${dataIdsByInt.findNameById(id.toInt()) ?: "Unknown"})")
             if (type.array) append("[${offset}]")
         }
     }
@@ -89,7 +89,7 @@ class GetDataDecoder(private val dataIdsByInt: Map<UByte, String>) {
     inner class RespPart(val type: TypeFlags, val id: UByte, val elements: List<List<UByte>>) {
         override fun toString() = buildString {
             append(" ${hex(type.typeValue)}:${hex(id)}")
-            append("(${dataIdsByInt[id] ?: "Unknown"})")
+            append("(${dataIdsByInt.findNameById(id.toInt()) ?: "Unknown"})")
             append(dataToString())
         }
 

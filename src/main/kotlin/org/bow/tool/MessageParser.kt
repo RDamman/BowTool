@@ -1,13 +1,9 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class MessageParser(
-    val handler: (
-        message: Message
-    ) -> Unit, val incompleteHandler: (
-        message: UByteArray
-    ) -> Unit
-) {
+    val handler: (message: Message) -> Unit, val incompleteHandler: (message: UByteArray) -> Unit) 
+    {
     private var cnt = 0u
     private var target: UByte? = null
     private var source: UByte? = null
@@ -17,9 +13,7 @@ class MessageParser(
     private var escaping = false
     private var last: Message? = null
 
-    fun feed(
-        inByte: UByte,
-    ) {
+    fun feed(inByte: UByte) {
         val input: UByteArray
 
         if (escaping) {

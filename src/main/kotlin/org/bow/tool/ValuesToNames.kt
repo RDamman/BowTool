@@ -1,4 +1,4 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import java.util.stream.Collectors
 
@@ -12,6 +12,16 @@ fun withName(target: UByte?, namesByInt: Map<UByte, String>, withValue: Boolean 
     }
     val hex = Integer.toHexString(target.toInt()).padStart(2, '0')
     val targetText = namesByInt[target]
+
+    return if (targetText != null) (if (withValue) "$targetText($hex)" else targetText) else hex
+}
+
+fun withName2(target: UByte?, namesByInt: BowItems, withValue: Boolean = true): String {
+    if (target == null) {
+        return "-"
+    }
+    val hex = Integer.toHexString(target.toInt()).padStart(2, '0')
+    val targetText: String? = namesByInt.findById(target.toInt())?.Name
 
     return if (targetText != null) (if (withValue) "$targetText($hex)" else targetText) else hex
 }

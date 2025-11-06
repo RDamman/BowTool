@@ -1,4 +1,4 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 class TypeFlags(flags: UByte) {
     /**

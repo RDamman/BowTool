@@ -1,19 +1,14 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import com.fazecast.jSerialComm.SerialPort
 
 @OptIn(ExperimentalUnsignedTypes::class)
-open class SerialOp(private val serialPort: SerialPort, private val baudRate: Int) {
-
-    protected val motorId = 0x00
-    protected val batId = 0x02
-    protected val pcId = 0x04
-    protected val displayId = 0x0C
+open class SerialOp(val serialPort: SerialPort, private val baudRate: Int) {
 
     protected fun open(): Boolean {
         serialPort.setBaudRate(baudRate)
         println("Trying to open serial port ${serialPort.systemPortName}(${serialPort.descriptivePortName}) at ${baudRate} baud")
-        if (!serialPort.openPort()) {
+        if (!serialPort.isOpen() && !serialPort.openPort()) {
             println("Failed to open port")
             return false
         }
@@ -27,69 +22,69 @@ open class SerialOp(private val serialPort: SerialPort, private val baudRate: In
     }
 
     protected fun sendGetData(target: UByte, type: UByte, id: UByte) {
-        sendCmd(target, 0x08u, type, id)
+        sendCmd(target, BOWCOMMAND.GET_DATA.id, type, id)
     }
 
     protected fun sendGetDataArray(target: UByte, type: UByte, id: UByte, offset: UByte) {
-        sendCmd(target, 0x08u, type, id, offset)
+        sendCmd(target, BOWCOMMAND.GET_DATA.id, type, id, offset)
     }
 
     protected fun sendPutData(target: UByte, type: UByte, id: UByte, vararg data: UByte) {
-        sendCmd(target, 0x09u, type, id, *data)
+        sendCmd(target, BOWCOMMAND.PUT_DATA.id, type, id, *data)
     }
 
     protected fun sendPutDataArray(target: UByte, type: UByte, id: UByte, from: UByte, to: UByte, length: UByte, vararg data: UByte) {
-        sendCmd(target, 0x09u, type, id, from, to, length, *data)
+        sendCmd(target, BOWCOMMAND.PUT_DATA.id, type, id, from, to, length, *data)
     }
 
     protected fun sendWakeUp(target: UByte) {
-        sendCmd(target, 0x14u)
+        sendCmd(target, BOWCOMMAND.WAKE_UP_BATTERY.id)
     }
 
     protected fun sendGetDisplaySerial() {
-        sendCmd(displayId.toUByte(), 0x20u)
+        sendCmd(BOWDEVICE.DISPLAY.id, BOWCOMMAND.GET_DISPLAY_SERIAL.id)
     }
 
     protected fun sendGetDisplaySerialFromMotor(index: Int) {
         val id: UByte = when (index) {
-            0 -> 0x5bu
-            1 -> 0x5cu
+            0 -> BOWDATA.PAIRED_SERIAL1.id
+            1 -> BOWDATA.PAIRED_SERIAL2.id
             else -> throw IllegalArgumentException("Index ${index} out of range")
         }
-        sendGetDataArray(motorId.toUByte(), 0x40u, id, 0x00u)
+        sendGetDataArray(BOWDEVICE.MOTOR.id, 0x40u, id, 0x00u)
     }
 
     protected fun sendStoreDisplaySerialInMotor(index: Int, vararg serial: UByte) {
         val id: UByte = when (index) {
-            0 -> 0x5bu
-            1 -> 0x5cu
+            0 -> BOWDATA.PAIRED_SERIAL1.id
+            1 -> BOWDATA.PAIRED_SERIAL2.id
             else -> throw IllegalArgumentException("Index ${index} out of range")
         }
-        sendPutDataArray(motorId.toUByte(), 0x40u, id, 0x00u, serial.size.toUByte(), serial.size.toUByte(), *serial)
+        sendPutDataArray(BOWDEVICE.MOTOR.id, 0x40u, id, 0x00u, serial.size.toUByte(), serial.size.toUByte(), *serial)
     }
 
     protected fun sendGetMotorSerialFromMotor() {
-        sendGetDataArray(motorId.toUByte(), 0x70u, 0xd1u, 0x00u)
+        sendGetDataArray(BOWDEVICE.MOTOR.id, 0x70u, 0xd1u, 0x00u)
     }
 
     protected fun sendGetMotorSerialFromBattery() {
-        sendGetDataArray(batId.toUByte(), 0x70u, 0xc8u, 0x00u)
+        sendGetDataArray(BOWDEVICE.BATTERY.id, 0x70u, 0xc8u, 0x00u)
     }
 
     protected fun sendStoreMotorSerialInBattery(vararg serial: UByte) {
-        sendPutDataArray(batId.toUByte(), 0x70u, 0xc8u, 0x00u, serial.size.toUByte(), serial.size.toUByte(), *serial)
+        sendPutDataArray(BOWDEVICE.BATTERY.id, 0x70u, 0xc8u, 0x00u, serial.size.toUByte(), serial.size.toUByte(), *serial)
     }
 
     protected fun sendStoreDisableServiceCounter() {
-        sendPutData(batId.toUByte(), 0x08u, 0x3bu, 0x00u, 0x00u, 0x00u, 0x00u)
+        sendPutData(BOWDEVICE.BATTERY.id, 0x08u, 0x3bu, 0x00u, 0x00u, 0x00u, 0x00u)
     }
 
     protected fun sendStoreClearErrorState() {
-        sendPutData(batId.toUByte(), 0x00u, 0x29u, 0x00u)
+        sendPutData(BOWDEVICE.BATTERY.id, 0x00u, 0x29u, 0x00u)
     }
 
     protected fun sendGetErrorState() {
-        sendGetData(batId.toUByte(), 0x00u, 0x29u)
+        sendGetData(BOWDEVICE.BATTERY.id, 0x00u, 0x29u)
     }
 
     /**
@@ -103,14 +98,14 @@ open class SerialOp(private val serialPort: SerialPort, private val baudRate: In
      * Sends a PONG message to the given target.
      */
     protected fun sendPong(target: UByte) {
-        send(byte1(target, 0x03u), byte2(pcId.toUByte(), 0x00))
+        send(byte1(target, 0x03u), byte2(BOWDEVICE.PC.id, 0x00))
     }
 
     /**
      * Send the given command to the given target, with the given (optional) data.
      */
     protected fun sendCmd(target: UByte, cmd: UByte, vararg data: UByte) {
-        send(byte1(target, 0x01u), byte2(pcId.toUByte(), data.size), cmd, *data)
+        send(byte1(target, 0x01u), byte2(BOWDEVICE.PC.id, data.size), cmd, *data)
     }
 
     /**
@@ -119,7 +114,7 @@ open class SerialOp(private val serialPort: SerialPort, private val baudRate: In
     private fun send(vararg cmd: UByte) {
         val outList = cmd.toMutableList()
         outList.add(0, 0x10u)
-        outList.add(CRC8().crc8Bow(outList))
+        outList.add(CRC8.crc8Bow(outList))
 
         sendRaw(outList.flatMapIndexed { ind, it -> if (ind != 0 && it.toUInt() == 0x10u) listOf(it, it) else listOf(it) })
     }

@@ -1,4 +1,4 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
 import com.fazecast.jSerialComm.SerialPort
 
@@ -39,13 +39,13 @@ class BatteryPairer(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort,
     }
 
     override fun handleResponse(message: Message): Result {
-        if (message.tgt() != pcId || !message.isRsp()) {
+        if (message.tgt() != BOWDEVICE.PC.id || !message.isRsp()) {
             return Result.CONTINUE
         }
 
         when (state) {
             State.GET_MOTOR_SERIAL -> {
-                if (message.src() == motorId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.MOTOR.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     motorSerial = message.data().drop(4)
                     log("Motor serial: ${hex(motorSerial)}")
                     state = State.GET_STORED_SERIAL
@@ -54,7 +54,7 @@ class BatteryPairer(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort,
             }
 
             State.GET_STORED_SERIAL -> {
-                if (message.src() == batId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.BATTERY.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     val batteryMotorSerial = message.data().drop(4)
                     log("Motor serial stored in battery: ${hex(batteryMotorSerial)}")
                     if (motorSerial.equals(batteryMotorSerial)) {
@@ -67,7 +67,7 @@ class BatteryPairer(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort,
             }
 
             State.PUT_SERIAL -> {
-                if (message.src() == motorId && message.isCmd(0x09)) {
+                if (message.src() == BOWDEVICE.MOTOR.id && message.isCmd(BOWCOMMAND.PUT_DATA.id)) {
                     log("New motor serial stored in battery!")
                     state = State.CHECK_STORED_SERIAL
                     return Result.SEND_COMMAND
@@ -75,7 +75,7 @@ class BatteryPairer(serialPort: SerialPort, baudRate: Int) : StdLoop(serialPort,
             }
 
             State.CHECK_STORED_SERIAL -> {
-                if (message.src() == batId && message.isCmd(0x08)) {
+                if (message.src() == BOWDEVICE.BATTERY.id && message.isCmd(BOWCOMMAND.GET_DATA.id)) {
                     log("Motor serial stored in motor: ${hex(message.data().drop(4))}")
                     return Result.DONE
                 }

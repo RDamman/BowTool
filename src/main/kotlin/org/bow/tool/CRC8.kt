@@ -1,6 +1,6 @@
-package org.bowparser.bowparser
+package org.bow.tool
 
-class CRC8 {
+object CRC8 {
 
     // Values for BOWBus CRC
     private val init = 0x07u.toUByte()
@@ -22,4 +22,23 @@ class CRC8 {
         }
         return crc
     }
+
+    @kotlin.ExperimentalUnsignedTypes
+    fun crc8Array(dataIn: UByteArray): UByte {
+        var crc = init
+        for (data in dataIn) {
+            for (bit in 0 until 8) {
+                val bitTrue = ((crc xor data.rotateRight(bit)) and 0x01u) > 0u
+                if (bitTrue) {
+                    crc = crc xor poly
+                }
+                crc = (crc.rotateRight(1)) and 0x7Fu
+                if (bitTrue) {
+                    crc = crc or 0x80u
+                }
+            }
+        }
+        return crc
+    }
+
 }
