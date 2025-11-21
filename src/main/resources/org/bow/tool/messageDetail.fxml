@@ -148,8 +148,8 @@
                   <TextArea fx:id="textareaMessageDecoded" layoutX="11.0" layoutY="396.0" prefHeight="69.0" prefWidth="260.0" style="-fx-control-inner-background: #f0f0f0; -fx-border-color: grey;" />
                </children>
             </AnchorPane>
-            <TextArea fx:id="textareaComment" layoutX="315.0" layoutY="76.0" prefHeight="63.0" prefWidth="328.0" style="-fx-background-color: white; -fx-border-color: grey;" />
-            <Label layoutX="314.0" layoutY="58.0" text="Comment">
+            <TextArea fx:id="textareaComment" layoutX="315.0" layoutY="78.0" prefHeight="96.0" prefWidth="328.0" style="-fx-background-color: white; -fx-border-color: grey;" />
+            <Label layoutX="314.0" layoutY="61.0" text="Comment">
                <padding>
                   <Insets left="5.0" right="5.0" />
                </padding>

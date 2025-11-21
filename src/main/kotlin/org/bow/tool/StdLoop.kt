@@ -6,7 +6,7 @@ import kotlin.concurrent.thread
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
-abstract class StdLoop(serialPort: SerialPort, baudRate: Int) : SerialOp(serialPort, baudRate) {
+abstract class StdLoop(serialPort: SerialPort, baudRate: Int, private val logHandler: ((String) -> Unit)? = null) : SerialOp(serialPort, baudRate) {
 
     private enum class State {
         // Clear everything currently in the buffer, to get rid of noise
@@ -135,6 +135,7 @@ abstract class StdLoop(serialPort: SerialPort, baudRate: Int) : SerialOp(serialP
 
     protected fun log(msg: String) {
         stdoutQueue.put(msg)
+        logHandler?.invoke(msg)
     }
 
     protected fun getMessageLog(): List<Message> {

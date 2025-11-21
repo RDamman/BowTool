@@ -6,7 +6,7 @@ import kotlin.concurrent.thread
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class MonitorBus(serialPort: SerialPort, baudRate: Int, dataIdsByInt: BowItems, val newMessageHandler: (message: Message) -> Unit) : SerialOp(serialPort, baudRate) {
+class MonitorBus(serialPort: SerialPort, baudRate: Int, dataIdsByInt: BowItems, val newMessageHandler: (message: Message) -> Unit, private val logHandler: ((String) -> Unit)? = null) : SerialOp(serialPort, baudRate) {
 
     private val toScan = List(256) { it.toUByte() }.toMutableList()
     private val allTypes = (0x00u..0xffu).map { it.toUByte() }
@@ -147,6 +147,7 @@ class MonitorBus(serialPort: SerialPort, baudRate: Int, dataIdsByInt: BowItems, 
 
     protected fun log(msg: String) {
         stdoutQueue.put(msg)
+        logHandler?.invoke(msg)
     }
 
     protected fun getMessageLog(): List<Message> {

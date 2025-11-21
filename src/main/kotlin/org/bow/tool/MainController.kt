@@ -108,30 +108,6 @@ class MainController {
         messageDetailEdit(null)
     }
 
-    fun messageDetailEdit(message : Message?) {
-        val fxmlLoader = FXMLLoader(javaClass.getResource("messageDetail.fxml"))
-        val vbox: VBox = fxmlLoader.load()
-        val controller: MessageDetailController = fxmlLoader.getController()
-        controller.showDetail(message, _stage,  vbox, handlerAddUpdate = { messageAdded, bUpdate ->
-            println("Update $bUpdate Message: $messageAdded")
-            if (bUpdate) {
-                val index = _messages.find { it.id == messageAdded.id }?.let { _messages.indexOf(it) } ?: -1
-                if (index >= 0) {
-                    _messages[index] = messageAdded
-                }
-            } else {
-                val selectedMessage = tableViewMessages.selectionModel.selectedItem
-                if (selectedMessage != null) {
-                    val selectedIndex = _messages.indexOf(selectedMessage)
-                    _messages.add(selectedIndex + 1, messageAdded)
-                } else {
-                    _messages.add(messageAdded)
-                }
-                tableViewMessages.selectionModel.select(messageAdded)
-            }
-        } )
-    }
-
      @FXML fun menuItemEditAction(event: ActionEvent) {
         val selectedMessage = tableViewMessages.selectionModel.selectedItem
         messageDetailEdit(selectedMessage)
@@ -179,6 +155,8 @@ class MainController {
     @FXML lateinit var tableColumnMsgsDecoded: TableColumn<Message, String>
     @FXML lateinit var tableColumnMsgsComment: TableColumn<Message, String>
 
+
+    @FXML lateinit var menuItemPlayMessages: MenuItem
 
     // Command > Pair
     @FXML lateinit var menuItemPairBattery: MenuItem
@@ -267,7 +245,7 @@ class MainController {
     val _extFilterBow = FileChooser.ExtensionFilter("BOW files (*.bow)", "*.bow")
 
     var _sDirectory: String = java.io.File(".").getCanonicalPath()
-    val _decoder = Decoder(Config.getInstance())
+    //val _decoder = Decoder(Config.getInstance())
     var initFilter: (bSet: Boolean) -> Unit = { _: Boolean ->  } // Placeholder for initialization (set later in initialize(
     
     fun clearMessages() {
@@ -445,6 +423,8 @@ class MainController {
                 }
 
             // menu items acties    
+            menuItemPlayMessages.setOnAction { event -> playMessages() }
+
             menuItemPairBattery.setOnAction { event -> doOp({ BatteryPairer(comboBoxComPort.value, comboBoxBaudrate.value).exec() }) }
             menuItemPairDisplay.setOnAction { event -> doOp({ DisplayPairer(comboBoxComPort.value, comboBoxBaudrate.value, 1).exec() }) }
 
@@ -513,7 +493,7 @@ class MainController {
             columnAssignCellValueFactory(tableColumnMsgsSource, { msg -> withName2(msg.source, _config.devices) })
             columnAssignCellValueFactory(tableColumnMsgsTarget, { msg -> withName2(msg.target, _config.devices) })
             columnAssignCellValueFactory(tableColumnMsgsLengthCrc, { msg -> "${msg.size}" }) // /${msg.Crc}
-            columnAssignCellValueFactory(tableColumnMsgsDecoded, { msg -> if (_decoder.check(msg).isEmpty()) _decoder.decode(msg) else _decoder.check(msg) })
+            columnAssignCellValueFactory(tableColumnMsgsDecoded, { msg -> "${_config.decodeMessage(msg)}" })
             columnAssignCellValueFactory(tableColumnMsgsComment, { msg -> "${msg.comment}" })
 
         
@@ -673,6 +653,51 @@ class MainController {
             Thread(task).start()
             }
         return result
+    }
+
+
+    fun messageDetailEdit(message : Message?) {
+        val fxmlLoader = FXMLLoader(javaClass.getResource("messageDetail.fxml"))
+        val vbox: VBox = fxmlLoader.load()
+        val controller: MessageDetailController = fxmlLoader.getController()
+        controller.showDetail(message, _stage,  vbox, handlerAddUpdate = { messageAdded, bUpdate ->
+            println("Update $bUpdate Message: $messageAdded")
+            if (bUpdate) {
+                val index = _messages.find { it.id == messageAdded.id }?.let { _messages.indexOf(it) } ?: -1
+                if (index >= 0) {
+                    _messages[index] = messageAdded
+                }
+            } else {
+                val selectedMessage = tableViewMessages.selectionModel.selectedItem
+                if (selectedMessage != null) {
+                    val selectedIndex = _messages.indexOf(selectedMessage)
+                    _messages.add(selectedIndex + 1, messageAdded)
+                } else {
+                    _messages.add(messageAdded)
+                }
+            }
+            tableViewMessages.selectionModel.select(messageAdded)
+        } )
+    }
+
+    private var  _controllerPlayMessages: PlayMessagesController? = null
+
+    fun playMessages() {
+        if (_controllerPlayMessages == null)
+        {
+            val fxmlLoader = FXMLLoader(javaClass.getResource("playMessages.fxml"))
+            _controllerPlayMessages = PlayMessagesController()
+             fxmlLoader.setController(_controllerPlayMessages)
+            val vbox: VBox = fxmlLoader.load()
+            // _controllerPlayMessages = fxmlLoader.getController()
+            try {
+                println("tonen afspelen messages")
+                _controllerPlayMessages!!.showDetail(_stage,  vbox,   {  tableViewMessages.selectionModel.selectedItems }, 
+                                       {_controllerPlayMessages = null } )
+            } catch (e: Exception) { println("$e") ; _controllerPlayMessages = null }
+        }
+        // else
+        //     _controllerPlayMessages?.makeFrontWindow()
     }
 
 

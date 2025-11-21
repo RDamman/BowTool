@@ -103,6 +103,24 @@ class Config(
             }
         }            
     }
+
+    var decoder: Decoder? = null
+        get () {
+            if (field == null)
+            {
+                synchronized(this) { 
+                    if (field == null)
+                        field = Decoder(this)
+                    }
+            }
+            return field
+        }
+    
+    public fun decodeMessage(msg: Message): String
+    {
+        val decoderLocal = decoder!!
+        return if (decoderLocal.check(msg).isEmpty()) decoderLocal.decode(msg) else decoderLocal.check(msg) 
+    }
 }
     
 data class ConfigFileData(

@@ -103,6 +103,11 @@
         </Menu>
             <Menu mnemonicParsing="false" text="Execute">
               <items>
+                  <MenuItem fx:id="menuItemPlayMessages" mnemonicParsing="false" text="Play selected messages">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="F5" control="UP" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
                   <Menu mnemonicParsing="false" text="Pair">
                     <items>
                       <MenuItem fx:id="menuItemPairBattery" mnemonicParsing="false" text="Battery" />

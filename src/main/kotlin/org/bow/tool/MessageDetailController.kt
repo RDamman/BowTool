@@ -15,12 +15,15 @@ import javafx.collections.ObservableList
 import javafx.beans.binding.*
 import javafx.beans.value.ObservableBooleanValue
 import kotlin.math.abs
+import kotlin.math.truncate
 import kotlin.collections.copyOf
 import java.lang.Float
 import javafx.stage.Stage
 import javafx.stage.Modality
 import javafx.scene.Scene
 import javafx.scene.Parent
+import javafx.util.Duration
+import javafx.scene.control.Tooltip
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -109,10 +112,18 @@ class MessageDetailController {
                     }
                 }
             }
+            if ((promptText != null) and (promptText != "")) 
+            {           
+                tooltip = Tooltip(promptText).apply {
+                    // Optioneel: Pas de weergavetijd aan (in milliseconden)
+                    showDelay = Duration.millis(300.0)
+                    hideDelay = Duration.millis(1500.0)
+                }           
+            }
         }
     }
 
-    fun initTextField(textField: TextField, textPropertyIn: StringProperty, isReadOnly: SimpleBooleanProperty?, handlerDataChange: ((String?) -> Unit)? = null) {
+    fun initTextField(textField: TextInputControl, textPropertyIn: StringProperty, isReadOnly: SimpleBooleanProperty?, handlerDataChange: ((String?) -> Unit)? = null) {
         textField.apply {
             val isEditable = (isReadOnly != null)
             val isReadOnlyProp: ObservableBooleanValue = isReadOnly ?: SimpleBooleanProperty(false)
@@ -131,7 +142,7 @@ class MessageDetailController {
             //
             // hier nog wijzigingen doorgeven aan het model
             textPropertyIn.addListener { _, oldValue, newValue ->
-                if ((oldValue != newValue) && isReadOnlyProp.value && isFocused) {
+                if ((oldValue != newValue) && isReadOnlyProp.value) {
                     println("TextField ${textField.id} changed from $oldValue to $newValue")
                     handlerDataChange?.invoke(newValue)
                 }
@@ -186,26 +197,25 @@ class MessageDetailController {
         initComboBox<BowItem>(comboBoxCommand, converter, listCommands, command, hasCommand, { newValue -> messageModel?.alterCommand(newValue) })
         initComboBox<BowItem>(comboBoxData, converter, listDataIds, commandData, isGetData, { newValue -> messageModel?.alterData(newValue) })
 
-        textfieldPayload.apply { 
-            textProperty().bindBidirectional(payload);
-            //
-            styleProperty().bind(
-                When(isMessage)
-                    .then("")
-                    .otherwise("-fx-opacity: 1; -fx-background-color: lightgray;")
-            )
-            editableProperty().bind(isMessage);
-         }
-
+        // textfieldPayload.apply { 
+        //     textProperty().bindBidirectional(payload);
+        //     //
+        //     styleProperty().bind(
+        //         When(isMessage)
+        //             .then("")
+        //             .otherwise("-fx-opacity: 1; -fx-background-color: lightgray;")
+        //     )
+        //     editableProperty().bind(isMessage);
+        //  }
         textfieldCRC8.apply { textProperty().bind(crc8) }
-
         textfieldMessageRaw.apply { textProperty().bind(messageRaw) }
-
-        textfieldTimestamp.apply { textProperty().bindBidirectional(timestamp) }
-
-        textareaComment.apply { textProperty().bindBidirectional(comment) }
-
         textareaMessageDecoded.apply { textProperty().bind(decoded) }
+        initTextField(textfieldPayload, payload, SimpleBooleanProperty(true), { newValue -> messageModel?.alterPayload(newValue) })
+        initTextField(textfieldTimestamp, timestamp, SimpleBooleanProperty(true), { newValue -> messageModel?.alterTimestamp(newValue) })
+        initTextField(textareaComment, comment, SimpleBooleanProperty(true), { newValue -> messageModel?.alterComment(newValue) })
+        // textfieldTimestamp.apply { textProperty().bindBidirectional(timestamp) }
+        // textareaComment.apply { textProperty().bindBidirectional(comment) }
+
 
         checkBoxAddCRC8.apply {
             selectedProperty().bindBidirectional(calculateAddCRC)
@@ -228,6 +238,8 @@ class MessageDetailController {
             val newMessage = messageModel?.buildMessage(bUpdate)
             if (newMessage != null) {
                 handlerAddUpdate?.invoke(newMessage, bUpdate)
+                if (bUpdate)
+                    messageModel?.id = newMessage.id
             } else {
                 val alert = Alert(Alert.AlertType.ERROR)
                 alert.title = "Error"
@@ -316,6 +328,8 @@ class MessageDetailController {
         timestamp.value = messageModelIn.timestamp?.toString() ?: ""
         comment.value = messageModelIn.comment ?: ""
         decoded.value = messageModelIn.decoded ?: ""
+        println("Timestamp: ${messageModelIn.timestamp}")
+        println("Comment: ${messageModelIn.comment}")
 
         // override fun toString(): String {
         //     return "Message(id=${messageModel.id}, type=${messageModel.type}, target=${messageModel.target}, source=${messageModel.source}, cmd=${messageModel.command})"
@@ -354,12 +368,9 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
     var crc8Calc: UByte? = null
     var timestamp: Long? = message?.timestamp ?: 0
     var comment: String? = message?.comment ?: ""
-    var decoded: String? = ""
+    var decoded: String? = if (message != null) Config.getInstance().decodeMessage(message) else ""
     var messageRaw: UByteArray = message?.message?.copyOf() ?: ubyteArrayOf()
-        set(value) {
-            field = value
-            parseMessageRaw()
-        }
+    private var bUpdating = false
     var addCalculatedCrc: Boolean = false
 
     init {
@@ -398,7 +409,7 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
         payload = ubyteArrayOf()
         validCRC8 = false
         crc8Calc = null
-        decoded = null
+        //decoded = null
 
         val iMessageSize = messageRaw.size
         if (iMessageSize > 0) {
@@ -443,7 +454,16 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
                 }
             }
         }
-        updateUI(this)
+        if (!bUpdating)
+        {
+            bUpdating = true
+            try {
+                updateUI(this)
+            }
+            finally {
+                bUpdating = false
+            }
+        }
     }
 
     fun minLengthMessageRaw(minLength: Int): UByteArray {
@@ -507,7 +527,6 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
                 result.add(hexValue.toUByte())
             }
         }
-
     }
     fun alterCalculateAddCRC(booleanIn: Boolean) {
         if (booleanIn) {
@@ -520,6 +539,23 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
                 messageRaw = messageRaw.sliceArray(0 until messageRaw.size -1)
             }
         }
+    }
+    fun alterPayload(sHex: String?)
+    {
+        val listElementsHelp = hexStringToListUByte((sHex ?: "").uppercase().replace(Regex("[^0-9A-F]"), ""))
+    }
+    fun alterTimestamp(sTimestamp: String?)
+    {
+        if (sTimestamp != null)
+        {
+            val longTimestamp: Long? = sTimestamp.toLongOrNull()
+            if (longTimestamp != null)
+                timestamp = longTimestamp
+        }
+    }
+    fun alterComment(sCommentIn: String?)
+    {
+        comment = sCommentIn
     }
 }
 
@@ -562,73 +598,81 @@ fun ListUBytetoString(listIn: List<UByte>): String {
 class PayloadConverter(val updateUI: (PayloadConverter) -> Unit) {
     private var iMode: Int = 0
     private var listElements: List<UByte> = listOf() 
-        set(value) {
-            field = value
-            processNewValue()
-        }
+    private var bUpdating = false
+    //
     var hexData: String = ""
     var intValue: String = ""
     var uintValue: String = ""
     var float32Value: String = ""
     var stringValue: String = ""
 
-    private fun processNewValue() {
+    private fun convert(listElementsIn: List<UByte>, iMode: Int) {
+        if (!bUpdating)
+        {
+            listElements = listElementsIn
             if (iMode != 5) { stringValue = ListUBytetoString(listElements) }
             if (iMode != 1) { hexData = hex(listElements).chunked(4).joinToString(" ") }
             if (iMode != 2) { intValue = if (listElements.size > 0) asInt(listElements) else "" }
             if (iMode != 3) { uintValue = if (listElements.size > 0) asUint(listElements) else "" }
             if (iMode != 4) { float32Value = if (listElements.size > 0) asFloat32(listElements) else "" }
-            updateUI(this)
+            //
+            bUpdating = true
+            try { 
+                updateUI(this)
+            }
+            finally { 
+                bUpdating = false
+            }
+        }
     }
 
 
     fun alterHexData(value: String?) {
-        iMode = 1
         hexData = value ?: ""
-        listElements = hexStringToListUByte((value ?: "").uppercase().replace(Regex("[^0-9A-F]"), ""))
+        val listElementsHelp = hexStringToListUByte((value ?: "").uppercase().replace(Regex("[^0-9A-F]"), ""))
+        convert(listElementsHelp, 1)
     }
     fun alterIntValue(value: String?) {
-        iMode = 2
         intValue = value ?: ""
         val intVal = value?.toIntOrNull() ?: 0
-        listElements = listOf(
+        val listElementsHelp = listOf(
             ((intVal shr 24) and 0xFF).toUByte(),
             ((intVal shr 16) and 0xFF).toUByte(),
             ((intVal shr 8) and 0xFF).toUByte(),
             (intVal and 0xFF).toUByte()
         )
+        convert(listElementsHelp, 2)
     }
     fun alterUIntValue(value: String?) {
-        iMode = 3
         uintValue = value ?: ""
         val uintVal = value?.toUIntOrNull() ?: 0u
-        listElements = listOf(
+        val listElementsHelp = listOf(
             ((uintVal.toInt() shr 24) and 0xFF).toUByte(),
             ((uintVal.toInt() shr 16) and 0xFF).toUByte(),
             ((uintVal.toInt() shr 8) and 0xFF).toUByte(),
             (uintVal.toInt() and 0xFF).toUByte()
         )       
+        convert(listElementsHelp, 3)
     }
     fun alterFloat32Value(value: String?) {
-        iMode = 4
         float32Value = value ?: ""
         val floatVal = value?.toFloatOrNull() ?: 0.0f
         val bits = floatVal.toBits()
-        listElements = listOf(
+        val listElementsHelp = listOf(
             ((bits shr 24) and 0xFF).toUByte(),
             ((bits shr 16) and 0xFF).toUByte(),
             ((bits shr 8) and 0xFF).toUByte(),
             (bits and 0xFF).toUByte()
         )       
+        convert(listElementsHelp, 4)
     }
     fun alterStringValue(value: String?) {
-        iMode = 5
         stringValue = value ?: ""
-        val result = ArrayList<UByte>()
+        val listElementsHelp = ArrayList<UByte>()
         for (char in (value ?: "")) {
             val charCode = char.code
-            result.add(charCode.toUByte())
+            listElementsHelp.add(charCode.toUByte())
         }
-        listElements = result
+        convert(listElementsHelp, 5)
     }
 }
