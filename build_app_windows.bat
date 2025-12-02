@@ -37,7 +37,7 @@ echo detecting required modules
   --multi-release %JAVA_VERSION% ^
   --ignore-missing-deps ^
   --class-path "target\installer\input\libs\*" ^
-  --print-module-deps target\classes\org\bowparser\bowparser\App.class > temp.txt
+  --print-module-deps target\classes\org\bow\tool\App.class > temp.txt
 
 set /p detected_modules=<temp.txt
 
@@ -85,7 +85,7 @@ call "%JAVA_HOME%\bin\jpackage" ^
   --dest target/installer ^
   --input target/installer/input/libs ^
   --name BowTool ^
-  --main-class org.bowparser.bowparser.AppLauncher ^
+  --main-class org.bow.tool.AppKt ^
   --main-jar %MAIN_JAR% ^
   --java-options -Xmx2048m ^
   --runtime-image target/java-runtime ^

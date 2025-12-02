@@ -44,7 +44,7 @@ detected_modules=`$JAVA_HOME/bin/jdeps \
   --ignore-missing-deps \
   --print-module-deps \
   --class-path "target/installer/input/libs/*" \
-    target/classes/org/bowparser/bowparser/App.class`
+    target/classes/org/bow/tool/AppKt.class`
 echo "detected modules: ${detected_modules}"
 
 
@@ -90,7 +90,7 @@ $JAVA_HOME/bin/jpackage \
 --dest target/installer \
 --input target/installer/input/libs \
 --name BowTool \
---main-class org.bowparser.bowparser.AppLauncher \
+--main-class org.bow.tool.AppKt \
 --main-jar ${MAIN_JAR} \
 --java-options -Xmx2048m \
 --runtime-image target/java-runtime \

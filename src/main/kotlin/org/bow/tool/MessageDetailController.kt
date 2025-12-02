@@ -2,22 +2,13 @@ package org.bow.tool
 
 import javafx.fxml.FXML
 import javafx.scene.control.*
-import javafx.collections.FXCollections.*
 import javafx.util.StringConverter
 import javafx.event.ActionEvent
 import javafx.beans.property.*
 import javafx.beans.binding.When
-import org.bow.tool.hex
-import org.bow.tool.BOWDATA
-import org.bow.tool.BOWCOMMAND
-import org.yaml.snakeyaml.introspector.Property
 import javafx.collections.ObservableList
-import javafx.beans.binding.*
 import javafx.beans.value.ObservableBooleanValue
-import kotlin.math.abs
-import kotlin.math.truncate
 import kotlin.collections.copyOf
-import java.lang.Float
 import javafx.stage.Stage
 import javafx.stage.Modality
 import javafx.scene.Scene
@@ -221,6 +212,7 @@ class MessageDetailController {
             selectedProperty().bindBidirectional(calculateAddCRC)
 
             calculateAddCRC.addListener { _, oldValue: Boolean, newValue: Boolean ->
+                println("CheckBox Add CRC8 changed from $oldValue to $newValue")
                 if (oldValue != newValue) {
                     messageModel?.alterCalculateAddCRC(newValue)
                 }
@@ -322,9 +314,10 @@ class MessageDetailController {
         command.value = messageModelIn.command
         commandData.value = messageModelIn.data
         payload.value = messageModelIn.payload.toHexString().chunked(4).joinToString(" ")
-        calculateAddCRC.value = messageModelIn.validCRC8
+        calculateAddCRC.value = messageModelIn.addCRC8
         crc8.value = if (messageModelIn.crc8Calc != null) hex(messageModelIn.crc8Calc!!) else ""
-        messageRaw.value = messageModelIn.messageRaw.toHexString().chunked(4).joinToString(" ")
+        // messageRaw.value = messageModelIn.messageRaw.toHexString().chunked(4).joinToString(" ")
+        messageRaw.value = messageModelIn.getEscapedMessageRaw().toHexString().chunked(4).joinToString(" ")
         timestamp.value = messageModelIn.timestamp?.toString() ?: ""
         comment.value = messageModelIn.comment ?: ""
         decoded.value = messageModelIn.decoded ?: ""
@@ -349,9 +342,9 @@ class MessageDetailController {
 
 
 @kotlin.ExperimentalUnsignedTypes
-class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) {
+class MessageWrapper(messageIn: Message?, val updateUI: (MessageWrapper) -> Unit) {
 
-    var id: Int? = message?.id ?: 0
+    var id: Int? = messageIn?.id ?: 0
     var start: BowItem? = null
     var target: BowItem? = null
     var messageType: BowItem? = null
@@ -364,17 +357,37 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
     var isGetData: Boolean = false
     var data: BowItem? = null
     var payload: UByteArray = ubyteArrayOf()
-    var validCRC8: Boolean = false
+    var addCRC8: Boolean = false
     var crc8Calc: UByte? = null
-    var timestamp: Long? = message?.timestamp ?: 0
-    var comment: String? = message?.comment ?: ""
-    var decoded: String? = if (message != null) Config.getInstance().decodeMessage(message) else ""
-    var messageRaw: UByteArray = message?.message?.copyOf() ?: ubyteArrayOf()
+    var timestamp: Long? = messageIn?.timestamp ?: System.currentTimeMillis()
+    var comment: String? = messageIn?.comment ?: ""
+    var decoded: String? = if (messageIn != null) Config.getInstance().decodeMessage(messageIn) else ""
     private var bUpdating = false
-    var addCalculatedCrc: Boolean = false
+    var determineAddCRC8: Boolean = true
+    var payloadStartIndex: Int = 0
+    var payloadEndIndex: Int = 0
+    var decoder = Decoder(Config.getInstance())
+    var messageRaw: UByteArray = messageIn?.message?.copyOf() ?: ubyteArrayOf()  // messageIn.message is not 0x10 escaped ??????
+        set(value) {
+            if (addCRC8 && (value.size > 1)) {
+                val escapedValueWithoutCRC = ubyteArrayOf(value[0]) + escape0x10Bytes(value.sliceArray(1 until value.size - 1))
+                // val escapedValueWithoutCRC = escape0x10Bytes(value, true)
+                crc8Calc = CRC8.crc8Array(escapedValueWithoutCRC)
+                value[value.size - 1] = crc8Calc!!
+            }
+            else
+                crc8Calc = null
+            field = value
+            parseMessageRaw()
+            //decoded = decoder.decode(buildMessage(true))
+            updateView()
+        }
+    
 
     init {
-        parseMessageRaw()
+         parseMessageRaw()
+         determineAddCRC8 = false
+         updateView()
     }
 
     fun buildMessage(bUpdate: Boolean): Message? {
@@ -383,7 +396,7 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
             target = target?.id?.toUByte() ?: 0u,
             source = if (hasSource) source?.id?.toUByte() else null,
             size = messageRaw?.size?.toUByte() ?: 0u,
-            message = messageRaw.copyOf(),
+            message = messageRaw.copyOf(), // Message.message (raw data) is not 0x10 escaped ??????
             previous = null
             )
             if (timestamp != null)
@@ -407,16 +420,17 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
         isGetData = false
         data = null
         payload = ubyteArrayOf()
-        validCRC8 = false
-        crc8Calc = null
+        //validCRC8 = false
+        //crc8Calc = null
         //decoded = null
 
         val iMessageSize = messageRaw.size
+        payloadStartIndex = iMessageSize
+        payloadEndIndex = iMessageSize
         if (iMessageSize > 0) {
             start = Config.getInstance().starts.findById(messageRaw[0].toInt())
             isMessage = (start != null) && (start!!.id == BOWSTART.MESSAGE.id)
             if (iMessageSize >= 2) {
-                crc8Calc = CRC8.crc8Array(messageRaw.sliceArray(0 until messageRaw.size - 1))
                 //
                 target = Config.getInstance().devicesList.findById(messageRaw[1].toInt().shr(4))
                 println("Target ui update: ${target}")
@@ -430,30 +444,49 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
                     val sourceId: Int = if (messageRaw.size >= 3) (messageRaw[2].toInt().ushr(4)) else -1
                     source = Config.getInstance().devicesList.findById(sourceId)
                     lengthMsg = Config.getInstance().lengthsList.find { if (it != null) (it.id.toInt() == iLengthMsg) else (iLengthMsg == -1) }
-                    iOffset += 1
+                    iOffset ++
                     if (hasCommand) {
-                        iOffset ++
                         val cmdId: Int = if (messageRaw.size >= 4) messageRaw[3].toInt() else -1
-                        val dataId: Int = if (messageRaw.size >= 6) messageRaw[5].toInt() else -1
                         command = Config.getInstance().commandsList.findById(cmdId)
-                        isGetData = (dataId == BOWCOMMAND.GET_DATA.id.toInt())
-                        if (isGetData) {
-                            //iOffset += 2
-                            data = Config.getInstance().dataIdsList.findById(dataId)
+                        iOffset ++
+                        val extraData: Int = if (messageRaw.size >= 5) messageRaw[4].toInt() else -1
+                        iOffset ++
+                        if (messageId == BOWTYPE.RESPONSE.id)
+                        {
+                            val responseData: Int = if (messageRaw.size >= 6) messageRaw[5].toInt() else -1
+                            iOffset ++
                         }
-                        
+                        isGetData = (cmdId == BOWCOMMAND.GET_DATA.id.toInt())
+                        if (isGetData) {
+                            val dataId: Int = if (messageRaw.size > iOffset) messageRaw[iOffset].toInt() else -1 // iOffset is 5 or 6
+                            data = Config.getInstance().dataIdsList.findById(dataId)
+                            iOffset ++
+                        }
+                        iOffset = 4 // make data part of the payload
                     }
                 }
                 //
-                validCRC8 = crc8Calc == messageRaw[messageRaw.size - 1]
+                if (determineAddCRC8)
+                {
+                    crc8Calc = CRC8.crc8Array(ubyteArrayOf(messageRaw[0]) + escape0x10Bytes(messageRaw.sliceArray(1 until messageRaw.size - 1)))
+                    // crc8Calc = CRC8.crc8Array(escape0x10Bytes(messageRaw, true))
+                    addCRC8 = crc8Calc == messageRaw[messageRaw.size - 1]
+                }
+                if (!addCRC8)
+                    crc8Calc = CRC8.crc8Array(ubyteArrayOf(messageRaw[0]) + escape0x10Bytes(messageRaw.sliceArray(1 until messageRaw.size)))
+                    // crc8Calc = CRC8.crc8Array(escape0x10Bytes(messageRaw, false))
                 //
                 if (iMessageSize >= iOffset + 1) {
-                    val payloadStartIndex: Int = iOffset
-                    val payloadEndIndex: Int = iMessageSize - (if (validCRC8) 1 else 0) // Exclude CRC8
+                    payloadStartIndex = iOffset
+                    payloadEndIndex = iMessageSize - (if (addCRC8) 1 else 0) // Exclude CRC8
                     payload = messageRaw.sliceArray(payloadStartIndex until payloadEndIndex)
                 }
             }
         }
+    }
+
+
+    fun updateView() {
         if (!bUpdating)
         {
             bUpdating = true
@@ -466,6 +499,7 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
         }
     }
 
+
     fun minLengthMessageRaw(minLength: Int): UByteArray {
         if (messageRaw.size < minLength) {
             val newArray = UByteArray(minLength)
@@ -477,9 +511,70 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
         return messageRaw
     }
 
+    fun unescape0x10Bytes(input: UByteArray): UByteArray {
+        val output = mutableListOf<UByte>()
+        var bEscaped: Boolean = false
+        for (byte in input) {
+        // val lengthLimit = input.size - (if (bHasCRC8) 1 else 0) 
+        // for (iT1 in 1 until lengthLimit) {
+        //     val byte: UByte = input[iT1]
+            if (byte == 0x10u.toUByte()) {
+                if (!bEscaped) {
+                    output.add(0x10u)
+                    bEscaped = true
+                }
+                else // skip this byte
+                    bEscaped = false
+            } else {
+                output.add(byte)
+                bEscaped = false
+            }
+        }
+        // if (bHasCRC8)
+        //     output.add(input[input.size - 1])
+        return output.toUByteArray()
+    }
+
+    fun escape0x10Bytes(input: UByteArray): UByteArray {
+        val output = mutableListOf<UByte>()
+        for (byte in input) {
+        // val lengthLimit = input.size - (if (bHasCRC8) 1 else 0) 
+        // for (iT1 in 1 until lengthLimit) {
+        //     val byte: UByte = input[iT1]
+            if (byte == 0x10u.toUByte()) {
+                output.add(0x10u)
+                output.add(0x10u)
+            } else {
+                output.add(byte)
+            }
+        }
+        // if (bHasCRC8)
+        //     output.add(input[input.size - 1])
+        return output.toUByteArray()
+    }
+    fun getEscapedMessageRaw(): UByteArray {
+        // return escape0x10Bytes(messageRaw, addCRC8)
+        val output = mutableListOf<UByte>()
+        if (messageRaw.size > 0) {
+            output.add(messageRaw[0])
+            output.addAll(escape0x10Bytes(messageRaw.sliceArray(1 until messageRaw.size - (if (addCRC8) 1 else 0))).toList())
+            if (addCRC8)
+                output.add(messageRaw[messageRaw.size - 1])
+        }
+        return output.toUByteArray()
+    }
+
+    fun recalculateCRC8() {
+        if (addCRC8) {
+            val crcValue = CRC8.crc8Array(messageRaw.sliceArray(0 until messageRaw.size - 1))
+            messageRaw[messageRaw.size - 1] = crcValue
+        }
+    }
+
     fun alterStart(bowitemIn: BowItem?) {
         val messageRawSet: UByteArray = minLengthMessageRaw(1)
         messageRawSet[0] = bowitemIn?.id ?: 0u
+        recalculateCRC8()
         messageRaw = messageRawSet
     }
     fun alterTarget(bowitemIn: BowItem?) {
@@ -514,35 +609,39 @@ class MessageWrapper(message: Message?, val updateUI: (MessageWrapper) -> Unit) 
         messageRaw = messageRawSet
     }
     fun alterData(bowitemIn: BowItem?) {
-        val messageRawSet: UByteArray = minLengthMessageRaw(5)
-        messageRawSet[4] = bowitemIn?.id ?: 0u
+        val iIndex = 5 + (if ((messageRaw[1].toInt() and 0xF) in listOf<Int>(BOWTYPE.RESPONSE.id.toInt())) 1 else 0)
+        val messageRawSet: UByteArray = minLengthMessageRaw(iIndex+1)
+        messageRawSet[iIndex] = bowitemIn?.id ?: 0u
         messageRaw = messageRawSet
     }
-    fun alterPayloadExtraData(sIn: String) {
-        val result = ArrayList<UByte>()
-        for (char in sIn) {
-            val hexValue = char.digitToIntOrNull(16)
-            if (hexValue != null) {
-                // Voeg de UByte-waarde toe (0-15)
-                result.add(hexValue.toUByte())
-            }
-        }
-    }
     fun alterCalculateAddCRC(booleanIn: Boolean) {
+        println("CheckBox Add CRC8 changed to $booleanIn")
         if (booleanIn) {
             val newArray = minLengthMessageRaw(messageRaw.size+1)
             newArray[newArray.size - 1] = CRC8.crc8Array(messageRaw)
+            addCRC8 = true
             messageRaw = newArray
         }
         else {
-            if ((messageRaw.size > 2) && (CRC8.crc8Array(messageRaw.sliceArray(0 until messageRaw.size - 1)) == messageRaw[messageRaw.size -1])) {
-                messageRaw = messageRaw.sliceArray(0 until messageRaw.size -1)
-            }
-        }
+            addCRC8 = false
+//            if ((messageRaw.size > 2) && (CRC8.crc8Array(messageRaw.sliceArray(0..messageRaw.size - 2)) == messageRaw[messageRaw.size -1])) {
+                messageRaw = messageRaw.sliceArray(0..messageRaw.size -2)
+//            }
+        }        
     }
     fun alterPayload(sHex: String?)
     {
         val listElementsHelp = hexStringToListUByte((sHex ?: "").uppercase().replace(Regex("[^0-9A-F]"), ""))
+        // vergelijk met huidige payload
+        if (!payload.contentEquals(listElementsHelp.toUByteArray())) 
+        {
+            val iLengthMsg = payloadStartIndex + listElementsHelp.size + (if (addCRC8) 1 else 0)
+            val messageRawSet: UByteArray = minLengthMessageRaw(iLengthMsg).sliceArray(0 until iLengthMsg)
+            for (i in listElementsHelp.indices) {
+                messageRawSet[payloadStartIndex + i] = listElementsHelp[i]
+            }
+            messageRaw = messageRawSet
+        }
     }
     fun alterTimestamp(sTimestamp: String?)
     {

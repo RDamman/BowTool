@@ -437,7 +437,8 @@ class MainController {
             // bow bestand openen
             menuItemFileOpen.setOnAction { event ->
                 val file = openFile(_extFilterBow)
-                if ((file != null) && (_file == null)) {
+                if (file != null) {
+//                    if ((file != null) && (_file == null)) {
                     _file = file
                 }
             }
@@ -514,6 +515,7 @@ class MainController {
 
             comboBoxComPort.disableProperty().bind(isMonitoring)
             comboBoxBaudrate.disableProperty().bind(isMonitoring)
+            buttonConnect.setOnAction {_ -> onButtonConnect() }
             buttonConnect.textProperty().bind(Bindings.`when`(isMonitoring).then("Disconnect").otherwise("Connect"))
             buttonLogMessages.setOnAction { _ -> isLogging.value = !isLogging.value }
             buttonLogMessages.textProperty().bind(Bindings.`when`(isLogging).then("Stop Logging").otherwise("Log Messages"))
